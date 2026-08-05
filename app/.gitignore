@@ -1,0 +1,19 @@
+# Node dependencies
+app/node_modules/
+
+# Logs
+*.log
+
+# macOS
+.DS_Store
+
+# Environment variables
+.env
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+
+# VS Code
+.vscode/

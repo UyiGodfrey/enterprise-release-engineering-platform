@@ -1,0 +1,6 @@
+name: Enterprise Release Pipeline
+
+on:
+  push:
+    branches:
+      - main
