@@ -187,3 +187,42 @@ jobs:
       - name: Wait for Staging Rollout
         run: |
           kubectl rollout status deployment/enterprise-release-api -n staging
+
+  deploy-production:
+    name: Deploy to Production
+    needs:
+      - build
+      - deploy-staging
+    runs-on: ubuntu-latest
+
+    environment:
+      name: production
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
+
+      - name: Configure kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region eu-west-1 \
+            --name enterprise-release-cluster
+
+      - name: Deploy image to Production
+        run: |
+          kubectl set image deployment/enterprise-release-api \
+            enterprise-release-api=${{ needs.build.outputs.image }} \
+            -n production
+
+      - name: Wait for Production Rollout
+        run: |
+          kubectl rollout status deployment/enterprise-release-api -n production
