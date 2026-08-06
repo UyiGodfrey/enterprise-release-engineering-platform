@@ -55,31 +55,29 @@ jobs:
       - name: Tag Docker Image
         run: |
           docker tag enterprise-release-api:${{ github.sha }} \
-          417067938602.dkr.ecr.eu-west-1.amazonaws.com/enterprise-release-api:${{ github.sha }}
+            417067938602.dkr.ecr.eu-west-1.amazonaws.com/enterprise-release-api:${{ github.sha }}
 
       - name: Push Docker Image
         run: |
           docker push \
-          417067938602.dkr.ecr.eu-west-1.amazonaws.com/enterprise-release-api:${{ github.sha }}
+            417067938602.dkr.ecr.eu-west-1.amazonaws.com/enterprise-release-api:${{ github.sha }}
 
       - name: Save Image Name
         id: image
         run: |
           IMAGE=417067938602.dkr.ecr.eu-west-1.amazonaws.com/enterprise-release-api:${GITHUB_SHA}
           echo "image=$IMAGE" >> "$GITHUB_OUTPUT"
-          echo "image=417067938602.dkr.ecr.eu-west-1.amazonaws.com/enterprise-release-api:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
-
 
   deploy-dev:
     name: Deploy to Development
-    needs: build
+    needs:
+      - build
     runs-on: ubuntu-latest
 
     environment:
       name: dev
 
     steps:
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -112,19 +110,17 @@ jobs:
         run: |
           kubectl rollout status deployment/enterprise-release-api -n dev
 
-
   deploy-qa:
     name: Deploy to QA
-    needs: 
-        - build
-        - deploy-dev
+    needs:
+      - build
+      - deploy-dev
     runs-on: ubuntu-latest
 
     environment:
       name: qa
 
     steps:
-
       - name: Configure AWS Credentials
         uses: aws-actions/configure-aws-credentials@v4
         with:
@@ -153,41 +149,41 @@ jobs:
         run: |
           kubectl rollout status deployment/enterprise-release-api -n qa
 
-      deploy-staging:
-        name: Deploy to Staging
-        needs:
-         - build
-         - deploy-qa
-        runs-on: ubuntu-latest
+  deploy-staging:
+    name: Deploy to Staging
+    needs:
+      - build
+      - deploy-qa
+    runs-on: ubuntu-latest
 
-        environment:
-          name: staging
+    environment:
+      name: staging
 
-        steps:
-          - name: Configure AWS Credentials
-            uses: aws-actions/configure-aws-credentials@v4
-            with:
-              aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
-              aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-              aws-region: eu-west-1
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
 
-          - name: Install kubectl
-            uses: azure/setup-kubectl@v4
-            with:
-             version: latest
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
 
-          - name: Configure kubeconfig
-            run: |
-             aws eks update-kubeconfig \
-             --region eu-west-1 \
-             --name enterprise-release-cluster
+      - name: Configure kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region eu-west-1 \
+            --name enterprise-release-cluster
 
-          - name: Deploy image to Staging
-            run: |
-              kubectl set image deployment/enterprise-release-api \
-              enterprise-release-api=${{ needs.build.outputs.image }} \
-              -n staging
+      - name: Deploy image to Staging
+        run: |
+          kubectl set image deployment/enterprise-release-api \
+            enterprise-release-api=${{ needs.build.outputs.image }} \
+            -n staging
 
-          - name: Wait for Staging Rollout
-            run: |
-              kubectl rollout status deployment/enterprise-release-api -n staging
+      - name: Wait for Staging Rollout
+        run: |
+          kubectl rollout status deployment/enterprise-release-api -n staging
