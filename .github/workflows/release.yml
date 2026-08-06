@@ -59,9 +59,50 @@ jobs:
       - name: Push Docker Image
         run: |
           docker push \
-          417067938602.dkr.ecr.eu-west-1.amazonaws.com/enterprise-release-api:${{ github.sha }}
+            417067938602.dkr.ecr.eu-west-1.amazonaws.com/enterprise-release-api:${{ github.sha }}
 
       - name: Save Image Name
         id: image
         run: |
           echo "image=417067938602.dkr.ecr.eu-west-1.amazonaws.com/enterprise-release-api:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+  deploy-dev:
+    name: Deploy to Development
+    needs: build
+    runs-on: ubuntu-latest
+
+    environment:
+      name: dev
+
+    steps:
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: eu-west-1
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: latest
+
+      - name: Configure kubeconfig
+        run: |
+          aws eks update-kubeconfig \
+            --region eu-west-1 \
+            --name enterprise-release-cluster
+
+      - name: Verify Cluster
+        run: |
+          kubectl get nodes
+
+      - name: Deploy latest image to Dev
+        run: |
+          kubectl set image deployment/enterprise-release-api \
+            enterprise-release-api=${{ needs.build.outputs.image }} \
+            -n dev
+
+      - name: Wait for Rollout
+        run: |
+          kubectl rollout status deployment/enterprise-release-api -n dev
