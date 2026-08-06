@@ -74,9 +74,8 @@ jobs:
 
       - name: Deploy to Dev
         run: |
-          kubectl set image deployment/enterprise-release-api \
-          enterprise-release-api=417067938602.dkr.ecr.eu-west-1.amazonaws.com/enterprise-release-api:${{ github.sha }} \
-          -namespace dev
+          kubectl set -n dev image deployment/enterprise-release-api \
+          enterprise-release-api=417067938602.dkr.ecr.eu-west-1.amazonaws.com/enterprise-release-api:${{ github.sha }} 
           
       - name: Wait for Rollout
         run: |
